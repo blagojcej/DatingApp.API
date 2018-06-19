@@ -52,12 +52,10 @@ namespace DatingApp.API.Controllers
         public async Task<IActionResult> AddPhotoForUser(int userId, PhotoForCreationDto photoDto)
         {
             var user = await _repo.GetUser(userId);
-
             if (user == null)
                 return BadRequest("Could not find user.");
 
             var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
-
             if (currentUserId != user.Id)
                 return Unauthorized();
 
@@ -73,7 +71,6 @@ namespace DatingApp.API.Controllers
                     {
                         File = new FileDescription(file.Name, stream)
                     };
-
                     uploadResult = _cloudinary.Upload(uploadParams);
                 }
             }
