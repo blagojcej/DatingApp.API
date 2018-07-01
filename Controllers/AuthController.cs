@@ -43,20 +43,29 @@ namespace DatingApp.API.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var userToCreate = new User
-            {
-                UserName = userForRegisterDto.UserName
-            };
+            // var userToCreate = new User
+            // {
+            //     UserName = userForRegisterDto.UserName
+            // };
+            var userToCreate = _mapper.Map<User>(userForRegisterDto);
 
-            var createUser = await _repo.Register(userToCreate, userForRegisterDto.Password);
+            var createdUser = await _repo.Register(userToCreate, userForRegisterDto.Password);
 
-            return StatusCode(201);
+            var userToReturn = _mapper.Map<UserForDetailDto>(createdUser);
+
+            // return StatusCode(201);
+            return CreatedAtRoute("GetUser", new { controller = "Users", id = createdUser.Id }, userToReturn);
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody]UserForLoginDto userForLoginDto)
         {
             // throw new Exception("Computer says no!");
+
+            if (!string.IsNullOrEmpty(userForLoginDto.UserName))
+            {
+                userForLoginDto.UserName = userForLoginDto.UserName.ToLower();
+            }
 
             var userFromRepo = await _repo.Login(userForLoginDto.UserName, userForLoginDto.Password);
 
