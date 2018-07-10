@@ -15,7 +15,7 @@ namespace DatingApp.API.Migrations
                     Id = table.Column<int>(nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     Content = table.Column<string>(nullable: true),
-                    DateRead = table.Column<DateTime>(nullable: false),
+                    DateRead = table.Column<DateTime>(nullable: true),
                     IsRead = table.Column<bool>(nullable: false),
                     MessageSent = table.Column<DateTime>(nullable: false),
                     RecipientDeleted = table.Column<bool>(nullable: false),
