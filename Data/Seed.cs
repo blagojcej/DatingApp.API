@@ -1,42 +1,45 @@
 using System.Collections.Generic;
+using System.Linq;
 using DatingApp.API.Models;
+using Microsoft.AspNetCore.Identity;
 using Newtonsoft.Json;
 
 namespace DatingApp.API.Data
 {
     public class Seed
     {
-        private readonly DataContext _context;
-
-        public Seed(DataContext context)
+        private readonly UserManager<User> _userManager;
+        public Seed(UserManager<User> userManager)
         {
-            this._context = context;
+            this._userManager = userManager;
         }
 
-        public void SeedUsers()
+        public async void SeedUsers()
         {
-            _context.Users.RemoveRange(_context.Users);
-            _context.SaveChanges();
-
-            //seed users
-            var userData=System.IO.File.ReadAllText("Data\\UserSeedData.json");
-            var users=JsonConvert.DeserializeObject<List<User>>(userData);
-            foreach (var user in users)
+            if (!_userManager.Users.Any())
             {
-                //create the password hash
-                byte[] passwordHash, passwordSalt;
-                CreatePasswordHash("password", out passwordHash, out passwordSalt);
+                //seed users
+                var userData = System.IO.File.ReadAllText("Data\\UserSeedData.json");
+                var users = JsonConvert.DeserializeObject<List<User>>(userData);
+                foreach (var user in users)
+                {
+                    await _userManager.CreateAsync(user, "password");                    
 
-                user.PasswordHash=passwordHash;
-                user.PasswordSalt=passwordSalt;
-                user.UserName=user.UserName.ToLower();
+                    //Commented after adding .NET Core authorization
+                    // //create the password hash
+                    // byte[] passwordHash, passwordSalt;
+                    // CreatePasswordHash("password", out passwordHash, out passwordSalt);
 
-                _context.Users.Add(user);
+                    //Commented after adding .NET Core authorization
+                    // user.PasswordHash=passwordHash;
+                    // user.PasswordSalt=passwordSalt;
+                    // user.UserName = user.UserName.ToLower();                   
+                }                
             }
-
-            _context.SaveChanges();
         }
 
+        //Commented after adding .NET Core authorization
+        /*
         private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
         {
             using (var hmac = new System.Security.Cryptography.HMACSHA512())
@@ -45,5 +48,6 @@ namespace DatingApp.API.Data
                 passwordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
             }
         }
+        */
     }
 }

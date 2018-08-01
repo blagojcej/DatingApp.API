@@ -6,23 +6,31 @@ using AutoMapper;
 using DatingApp.API.Data;
 using DatingApp.API.Dtos;
 using DatingApp.API.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
 namespace DatingApp.API.Controllers
 {
+    //After adding authorization globaly at Startup class in AddMvc method
+    [AllowAnonymous]
     [Route("api/[controller]")]
     public class AuthController : Controller
     {
-        private readonly IAuthRepository _repo;
         private readonly IConfiguration _config;
         private readonly IMapper _mapper;
+        private readonly UserManager<User> _userManager;
+        private readonly SignInManager<User> _signInManager;
+        private readonly IAuthRepository _repo;
 
-        public AuthController(IAuthRepository repo, IConfiguration config, IMapper mapper)
+        public AuthController(IConfiguration config, IMapper mapper, UserManager<User> userManager, SignInManager<User> signInManager)
         {
+            this._signInManager = signInManager;
+            this._userManager = userManager;
             this._mapper = mapper;
-            this._repo = repo;
             this._config = config;
         }
 
@@ -60,18 +68,30 @@ namespace DatingApp.API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody]UserForLoginDto userForLoginDto)
         {
-            // throw new Exception("Computer says no!");
+            var user = await _userManager.FindByNameAsync(userForLoginDto.UserName);
 
-            if (!string.IsNullOrEmpty(userForLoginDto.UserName))
+            var result = await _signInManager.CheckPasswordSignInAsync(user, userForLoginDto.Password, false);
+
+            if (result.Succeeded)
             {
-                userForLoginDto.UserName = userForLoginDto.UserName.ToLower();
+                var appUser = await _userManager.Users
+                .Include(p => p.Photos)
+                .FirstOrDefaultAsync(u => u.NormalizedUserName == userForLoginDto.UserName.ToUpper());
+
+                var userToReturn = _mapper.Map<UserForListDto>(appUser);
+
+                return Ok(new
+                {
+                    token = GenerateJwtToken(appUser),
+                    user = userToReturn
+                });
             }
 
-            var userFromRepo = await _repo.Login(userForLoginDto.UserName, userForLoginDto.Password);
+            return Unauthorized();
+        }
 
-            if (userFromRepo == null)
-                return Unauthorized();
-
+        private string GenerateJwtToken(User user)
+        {
             //generate token
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = System.Text.Encoding.ASCII.GetBytes(_config.GetSection("AppSettings:Token").Value);
@@ -79,18 +99,14 @@ namespace DatingApp.API.Controllers
             {
                 Subject = new ClaimsIdentity(new Claim[]
                 {
-                    new Claim(ClaimTypes.NameIdentifier, userFromRepo.Id.ToString()),
-                    new Claim(ClaimTypes.Name, userFromRepo.UserName),
+                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                    new Claim(ClaimTypes.Name, user.UserName),
                 }),
                 Expires = DateTime.Now.AddDays(1),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha512Signature)
             };
             var token = tokenHandler.CreateToken(tokenDescriptor);
-            var tokenString = tokenHandler.WriteToken(token);
-
-            var user = _mapper.Map<UserForListDto>(userFromRepo);
-
-            return Ok(new { tokenString, user });
+            return tokenHandler.WriteToken(token);
         }
     }
 }

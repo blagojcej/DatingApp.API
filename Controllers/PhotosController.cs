@@ -14,7 +14,8 @@ using Microsoft.Extensions.Options;
 
 namespace DatingApp.API.Controllers
 {
-    [Authorize]
+    //Commented after adding authorization globaly at Startup class in AddMvc method
+    // [Authorize]
     [Route("api/users/{userId}/photos")]
     public class PhotosController : Controller
     {
