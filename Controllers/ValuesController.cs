@@ -21,18 +21,20 @@ namespace DatingApp.API.Controllers
         }
         // GET api/values
         [HttpGet]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetValues()
         {
-            var values=await _context.Values.ToListAsync();
+            var values = await _context.Values.ToListAsync();
 
             return Ok(values);
         }
 
         // GET api/values/5
         [HttpGet("{id}")]
+        [Authorize(Roles = "Member")]
         public async Task<IActionResult> GetValue(int id)
         {
-            var value=await _context.Values.FirstOrDefaultAsync(x=>x.Id==id);
+            var value = await _context.Values.FirstOrDefaultAsync(x => x.Id == id);
 
             return Ok(value);
         }
